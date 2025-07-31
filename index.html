@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/taffydb/2.7.3/taffy-min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/taffydb/2.7.3/taffy.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+</head>
+<body>
+    <h1>Load Products from CSV</h1>
+    <input type="file" name="inputCSV" id="csvFileInput" accept=".csv">
+
+    <script>
+        let db;
+        document.getElementById('csvFileInput').addEventListener('change', function(e){
+            const file = e.target.files[0];
+            if(!file) return;
+            Papa.parse(file,{
+                header: true,
+                skipEmptyLines : true,
+                complete: function(results){
+                    const data = results.data.map(row => ({
+                        id: parseInt(row.id),
+                        name: row.name,
+                        price: parseFloat(row.price),
+                        description: row.description,
+                        department: row.department
+                    }));
+                    db = TAFFY(data);
+                    console.log("Data Loaded Successfully", db().get());
+                }
+            })
+        })
+    </script>
+</body>
+</html>
