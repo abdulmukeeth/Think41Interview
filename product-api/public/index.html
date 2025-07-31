@@ -2,53 +2,82 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/taffydb/2.7.3/taffy-min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/taffydb/2.7.3/taffy.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-
+    <title>Product List</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body>
-    <h1>Load Products from CSV</h1>
-    <input type="file" name="inputCSV" id="csvFileInput" accept=".csv">
+<body class="bg-light">
 
-    <script>
-        let db;
-        document.getElementById('csvFileInput').addEventListener('change', function(e){
-            const file = e.target.files[0];
-            if(!file) return;
-            Papa.parse(file,{
-                header: true,
-                skipEmptyLines : true,
-                complete: function(results){
-                    const data = results.data.map(row => ({
-                        id: parseInt(row.id),
-                        name: row.name,
-                        price: parseFloat(row.price),
-                        description: row.description,
-                        department: row.department
-                    }));
+<div class="container py-5">
+    <h1 class="mb-4">Product Upload & List</h1>
 
+    <div class="mb-5">
+        <label for="csvFileInput" class="form-label">Upload CSV File</label>
+        <input type="file" class="form-control" id="csvFileInput" accept=".csv">
+    </div>
 
-                     // Send each product to backend
+    <h2>Products</h2>
+    <ul class="list-group" id="productList"></ul>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/taffydb/2.7.3/taffy-min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+<script>
+    document.getElementById('csvFileInput').addEventListener('change', function(e){
+        const file = e.target.files[0];
+        if(!file) return;
+
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results){
+                const data = results.data.map(row => ({
+                    id: parseInt(row.id),
+                    name: row.name,
+                    price: parseFloat(row.price),
+                    description: row.description,
+                    department: row.department
+                }));
+
                 data.forEach(product => {
-        fetch('http://localhost:3000/products', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(product)
-        }).then(res => res.json())
-          .then(response => console.log("Uploaded:", response))
-          .catch(err => console.error("Upload error:", err));
+                    fetch('http://localhost:3000/products', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(product)
+                    }).catch(err => console.error("Upload error:", err));
+                });
+
+                setTimeout(loadProductList, 1000);
+            }
+        });
     });
 
-    db = TAFFY(data); // Optional: still use TAFFY locally if needed
-    console.log("Data Loaded and Sent to Server", data);
-                }
-            })
-        })
-    </script>
+    function loadProductList() {
+        fetch('http://localhost:3000/products')
+            .then(res => res.json())
+            .then(products => {
+                const list = document.getElementById('productList');
+                list.innerHTML = '';
+                products.forEach(p => {
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                    li.innerHTML = `
+                        <div>
+                            <strong>${p.name}</strong><br>
+                            <small class="text-muted">₹${p.price.toFixed(2)}</small>
+                        </div>
+                        <a href="product.html?id=${p.id}" class="btn btn-sm btn-primary">Details</a>
+                    `;
+                    list.appendChild(li);
+                });
+            });
+    }
+
+    window.onload = loadProductList;
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
