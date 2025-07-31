@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Departments</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    input, button { margin: 5px; padding: 5px; }
+    table { width: 50%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; }
+    th { background-color: #f0f0f0; }
+  #flash {
+    display: none;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 4px;
+    color: #fff;
+    transition: opacity 0.5s ease;
+  }
+
+  </style>
+</head>
+<body>
+    <div class="container mt-4">
+  <a href="index.html" class="btn btn-primary mb-3">Go to Products</a>
+</div>
+
+  <h2>Department Manager</h2>
+
+  <div>
+    <div id="flash" style="display:none; padding:10px; margin:10px 0; border-radius:4px;"></div>
+
+    <input type="text" id="deptName" placeholder="Department Name">
+    <button onclick="createDepartment()">Add Department</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="deptTableBody"></tbody>
+  </table>
+
+  <script>
+    const API = '/departments';
+
+    function fetchDepartments() {
+      fetch(API)
+        .then(res => res.json())
+        .then(depts => {
+          const body = document.getElementById('deptTableBody');
+          body.innerHTML = '';
+          depts.forEach(dept => {
+            body.innerHTML += `
+              <tr>
+                <td>${dept.id}</td>
+                <td contenteditable="true" onblur="editDepartment(${dept.id}, this.innerText)">
+                  ${dept.name}
+                </td>
+                <td>
+                  <button onclick="deleteDepartment(${dept.id})">Delete</button>
+                </td>
+              </tr>
+            `;
+          });
+        });
+    }
+
+    function createDepartment() {
+  const name = document.getElementById('deptName').value;
+  if (!name.trim()) return showFlash('Please enter a department name', 'error');
+
+  fetch(API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name })
+  })
+    .then(res => {
+      return res.json().then(data => {
+        if (!res.ok) {
+          // Show error from server (like UNIQUE constraint failure)
+          showFlash(data.error || 'Something went wrong', 'error');
+        } else {
+          showFlash('Department added successfully', 'success');
+          document.getElementById('deptName').value = '';
+          fetchDepartments(); // Refresh list
+        }
+      });
+    })
+    .catch(() => showFlash('Network error. Try again.', 'error'));
+}
+
+
+
+    function editDepartment(id, newName) {
+      fetch(`${API}/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName })
+      })
+      .then(res => {
+        if (!res.ok) return res.text().then(alert);
+        fetchDepartments();
+      });
+    }
+
+    function deleteDepartment(id) {
+  if (!confirm('Are you sure you want to delete this department?')) return;
+
+  fetch(`${API}/${id}`, { method: 'DELETE' })
+    .then(async (res) => {
+      const data = await res.json();
+      if (!res.ok) {
+        showFlash(data.error || 'Failed to delete department', 'error');
+      } else {
+        showFlash(data.message || 'Department deleted successfully');
+        fetchDepartments();
+      }
+    })
+    .catch(() => showFlash('Unexpected error. Please try again.', 'error'));
+}
+
+
+
+    fetchDepartments();
+
+    function showFlash(message, type = 'success') {
+  const flash = document.getElementById('flash');
+  flash.innerText = message;
+  flash.style.display = 'block';
+  flash.style.backgroundColor = type === 'error' ? '#f44336' : '#4CAF50'; // red or green
+  flash.style.color = '#fff';
+  setTimeout(() => flash.style.display = 'none', 3000);
+}
+
+  </script>
+
+</body>
+</html>

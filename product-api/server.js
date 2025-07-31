@@ -110,13 +110,79 @@ app.delete('/products/:id', (req, res) => {
     });
 });
 
+// Department APIs 
 
+// GET all departments
 app.get('/departments', (req, res) => {
-  db.all("SELECT * FROM departments", [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
+    db.all("SELECT * FROM departments", [], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+// GET department by ID
+app.get('/departments/:id', (req, res) => {
+    db.get("SELECT * FROM departments WHERE id = ?", [req.params.id], (err, row) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (!row) return res.status(404).send("Department not found");
+        res.json(row);
+    });
+});
+
+// POST new department
+app.post('/departments', (req, res) => {
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ error: "Name is required" });
+
+   db.run(
+  'INSERT INTO departments(name) VALUES (?)',
+  [name],
+  function (err) {
+    if (err) {
+      if (err.code === 'SQLITE_CONSTRAINT') {
+        return res.status(400).json({ error: 'Department already exists' });
+      }
+      return res.status(500).json({ error: 'Failed to add department' });
+    }
+    res.json({ id: this.lastID, name });
+  }
+);
+
+});
+
+// PUT update department
+app.put('/departments/:id', (req, res) => {
+    const { name } = req.body;
+    db.run("UPDATE departments SET name = ? WHERE id = ?", [name, req.params.id], function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        if (this.changes === 0) return res.status(404).send("Department not found");
+        res.json({ id: req.params.id, name });
+    });
+});
+
+// DELETE department
+app.delete('/api/departments/:id', (req, res) => {
+  const { id } = req.params;
+  db.run('DELETE FROM departments WHERE id = ?', [id], function (err) {
+    if (err) {
+      if (err.code === 'SQLITE_CONSTRAINT') {
+        return res.status(400).json({
+          error: 'Cannot delete department: it is assigned to one or more products.'
+        });
+      }
+      return res.status(500).json({ error: 'Failed to delete department' });
+    }
+
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Department not found' });
+    }
+
+    res.json({ message: 'Department deleted successfully' });
   });
 });
+
+
+
 
 
 app.listen(PORT, () => {
